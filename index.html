@@ -113,8 +113,10 @@
                 <input type="text" id="keyInput" required>
 
                 <!-- Trường Giá trị cập nhật động -->
-                <label id="labelValue">Loại hình *</label>
-                <input type="text" id="valueInput" required>
+                <label id="labelValue">Giá trị cập nhật *</label>
+                <div id="valueContainer">
+                    <input type="text" id="valueInput" required>
+                </div>
 
                 <button type="button" onclick="moPopupShopee()">📨 Gửi yêu cầu</button>
             </form>
@@ -311,11 +313,39 @@
 
         // Mapping loại yêu cầu
         const mapping = {
-            "Cập nhật loại hình đơn vị": { keyLabel: "Mã đơn vị", valueLabel: "Loại hình", keyPlaceholder: "Nhập mã đơn vị", valuePlaceholder: "Nhập loại hình mới" },
-            "Cập nhật loại đơn vị": { keyLabel: "Mã đơn vị", valueLabel: "Loại đơn vị", keyPlaceholder: "Nhập mã đơn vị", valuePlaceholder: "Nhập loại đơn vị mới" },
-            "Cập nhật tên đơn vị": { keyLabel: "Mã đơn vị", valueLabel: "Tên đơn vị", keyPlaceholder: "Nhập mã đơn vị", valuePlaceholder: "Nhập tên đơn vị mới" },
-            "Cập nhật email đơn vị": { keyLabel: "Mã đơn vị", valueLabel: "Email", keyPlaceholder: "Nhập mã đơn vị", valuePlaceholder: "Nhập email mới" },
-            "Cập nhật mã kho bạc của user": { keyLabel: "User", valueLabel: "Mã KB", keyPlaceholder: "Nhập username", valuePlaceholder: "Nhập mã kho bạc mới" }
+            "Cập nhật loại hình đơn vị": { 
+                keyLabel: "Mã đơn vị", 
+                valueLabel: "Loại hình đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680",
+                type: "select_loaihinh" 
+            },
+            "Cập nhật loại đơn vị": { 
+                keyLabel: "Mã đơn vị", 
+                valueLabel: "Loại đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", 
+                type: "select_loaidv" 
+            },
+            "Cập nhật tên đơn vị": { 
+                keyLabel: "Mã đơn vị", 
+                valueLabel: "Tên đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", 
+                valuePlaceholder: "VD: Trường THCS Lam Điền", 
+                type: "text" 
+            },
+            "Cập nhật email đơn vị": { 
+                keyLabel: "Mã đơn vị", 
+                valueLabel: "Email mới", 
+                keyPlaceholder: "VD: 832.00847.1162345", 
+                valuePlaceholder: "VD: hoangchien866089@gmail.com", 
+                type: "email" 
+            },
+            "Cập nhật mã kho bạc của user": { 
+                keyLabel: "User", 
+                valueLabel: "Mã KB mới", 
+                keyPlaceholder: "VD: mb\\luunq", 
+                valuePlaceholder: "VD: 0011", 
+                type: "number" 
+            }
         };
 
         function hienThiTheoLoai() {
@@ -323,21 +353,46 @@
             const labelKey = document.getElementById("labelKey");
             const labelValue = document.getElementById("labelValue");
             const keyInput = document.getElementById("keyInput");
-            const valueInput = document.getElementById("valueInput");
+            const valueContainer = document.getElementById("valueContainer");
 
             if (loai && mapping[loai]) {
                 const m = mapping[loai];
                 labelKey.innerText = m.keyLabel + " *";
                 labelValue.innerText = m.valueLabel + " *";
                 keyInput.placeholder = m.keyPlaceholder;
-                valueInput.placeholder = m.valuePlaceholder;
                 keyInput.value = "";
-                valueInput.value = "";
+
+                // Gen HTML động cho phần value
+                if (m.type === "select_loaihinh") {
+                    valueContainer.innerHTML = `
+                        <select id="valueInput" required>
+                            <option value="">-- Chọn loại hình --</option>
+                            <option value="01">01: Hành Chính</option>
+                            <option value="02">02: Sự Nghiệp</option>
+                            <option value="03">03: DNNN</option>
+                            <option value="04">04: Quỹ</option>
+                            <option value="05">05: CQQL</option>
+                            <option value="06">06: Khác</option>
+                            <option value="07">07: Không xác định</option>
+                        </select>`;
+                } else if (m.type === "select_loaidv") {
+                    valueContainer.innerHTML = `
+                        <select id="valueInput" required>
+                            <option value="">-- Chọn loại đơn vị --</option>
+                            <option value="01">01: ĐV kế toán cấp trên</option>
+                            <option value="02">02: CQ quản lý</option>
+                            <option value="03">03: Quỹ TCNN</option>
+                            <option value="04">04: Chế độ KT</option>
+                            <option value="05">05: ĐV kế toán độc lập</option>
+                        </select>`;
+                } else {
+                    valueContainer.innerHTML = `<input type="${m.type}" id="valueInput" placeholder="${m.valuePlaceholder}" required>`;
+                }
             } else {
-                labelKey.innerText = "Key *";
+                labelKey.innerText = "Mã đơn vị/User *";
                 labelValue.innerText = "Giá trị *";
                 keyInput.placeholder = "";
-                valueInput.placeholder = "";
+                valueContainer.innerHTML = `<input type="text" id="valueInput" required>`;
             }
         }
 
