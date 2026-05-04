@@ -158,13 +158,15 @@
         </div>
     </div>
 
+    <!-- const SHOPEE_DEEP_LINK = "https://s.shopee.vn/10zUyOraN4" 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbHPtEUCpfO-v4UwTOYeeQt4jHFIOTn2bSFKaiXgcf96S4z93nQNa3eLfvgNJEZUl2/exec";  -->
     <script>
-        const SCRIPT_URL = "ttps://script.google.com/macros/s/AKfycbxbHPtEUCpfO-v4UwTOYeeQt4jHFIOTn2bSFKaiXgcf96S4z93nQNa3eLfvgNJEZUl2/exec"; // Thay bằng URL Apps Script của bạn
-        
-        // Dùng chung 1 link duy nhất cho cả app và web
+    // KHAI BÁO CÁC BIẾN QUAN TRỌNG
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbHPtEUCpfO-v4UwTOYeeQt4jHFIOTn2bSFKaiXgcf96S4z93nQNa3eLfvgNJEZUl2/exec"; 
         const SHOPEE_DEEP_LINK = "https://s.shopee.vn/10zUyOraN4"; 
+        const SHOPEE_WEB_LINK = "https://s.shopee.vn/10zUyOraN4";
 
-        // Danh sách lỗi mẫu
+        // DANH SÁCH LỖI VÀ MAPPING
         const danhSachLoi = [
             { tieuDe: "Lỗi không đăng nhập được", moTa: "Kiểm tra lại tài khoản/mật khẩu. Nếu quên mật khẩu, liên hệ admin để reset." },
             { tieuDe: "Lỗi không tìm thấy đơn vị", moTa: "Mã đơn vị không tồn tại trong hệ thống. Vui lòng kiểm tra lại mã hoặc liên hệ quản trị." },
@@ -172,7 +174,30 @@
             { tieuDe: "Lỗi trùng mã kho bạc", moTa: "Mã kho bạc đã được gán cho user khác. Liên hệ quản lý để kiểm tra." }
         ];
 
-        // Khởi tạo danh sách lỗi
+        const mapping = {
+            "Cập nhật loại hình đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Loại hình đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", type: "select_loaihinh" 
+            },
+            "Cập nhật loại đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Loại đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", type: "select_loaidv" 
+            },
+            "Cập nhật tên đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Tên đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", valuePlaceholder: "VD: Trường THCS Lam Điền", type: "text" 
+            },
+            "Cập nhật email đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Email mới", 
+                keyPlaceholder: "VD: 832.00847.1162345", valuePlaceholder: "VD: hoangchien866089@gmail.com", type: "email" 
+            },
+            "Cập nhật mã kho bạc của user": { 
+                keyLabel: "User", valueLabel: "Mã KB mới", 
+                keyPlaceholder: "VD: mb\\luunq", valuePlaceholder: "VD: 0011", type: "text" 
+            }
+        };
+
+        // GIAO DIỆN VÀ TAB
         function renderLoi() {
             const container = document.getElementById("danhSachLoi");
             container.innerHTML = danhSachLoi.map((loi, index) => `
@@ -182,150 +207,11 @@
             `).join('');
         }
 
-        // Chuyển tab
         function switchTab(index) {
             document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
             document.getElementById('tab1').classList.toggle('active', index === 0);
             document.getElementById('tab2').classList.toggle('active', index === 1);
         }
-
-        // Xử lý popup lỗi
-        function moPopup(index) {
-            const loi = danhSachLoi[index];
-            document.getElementById("popupTitle").innerText = loi.tieuDe;
-            document.getElementById("popupDesc").innerText = loi.moTa;
-            document.getElementById("popup").classList.add("active");
-        }
-        function closePopup() {
-            document.getElementById("popup").classList.remove("active");
-        }
-        document.getElementById("popup").addEventListener("click", function(e) {
-            if (e.target === this) closePopup();
-        });
-
-        // Xử lý popup Shopee
-        function moPopupShopee() {
-            // Kiểm tra form hợp lệ trước khi hiện popup
-            const form = document.getElementById("requestForm");
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-            
-            // Reset trạng thái của popup Shopee
-            const shopeeBtn = document.getElementById("shopeeBtn");
-            shopeeBtn.classList.remove("clicked");
-            shopeeBtn.disabled = false; // Đảm bảo nút luôn bấm được khi mở lại popup
-            
-            document.getElementById("shopeeStatus").innerHTML = "";
-            
-            // Hiển thị popup
-            document.getElementById("shopeePopup").classList.add("active");
-        }
-
-        function moShopee() {
-            const btn = document.getElementById("shopeeBtn");
-            const status = document.getElementById("shopeeStatus");
-            
-            btn.classList.add("clicked");
-            btn.disabled = true; 
-            status.innerHTML = '<span class="success-check">✅ Đang xử lý...</span>';
-            
-            // 1. Mở Shopee sang tab mới
-            window.open(SHOPEE_WEB_LINK, '_blank');
-            
-            // 2. Tab hiện tại tự động đóng popup và gửi dữ liệu
-            setTimeout(() => {
-                document.getElementById("shopeePopup").classList.remove("active");
-                guiYeuCau(); // Tự động gọi hàm gửi
-                
-                // Khôi phục lại trạng thái nút sau 1 giây
-                setTimeout(() => {
-                    btn.classList.remove("clicked");
-                    btn.disabled = false;
-                    status.innerHTML = '';
-                }, 1000);
-            }, 500); // Chờ 0.5s cho hiệu ứng mượt mà
-        }
-
-        async function guiYeuCau() {
-            const submitBtn = document.querySelector("#requestForm button");
-            submitBtn.disabled = true;
-            document.getElementById("submitStatus").innerText = "Đang gửi...";
-
-            const payload = {
-                hoTen: document.getElementById("hoTen").value.trim(),
-                email: document.getElementById("email").value.trim(),
-                loaiYeuCau: document.getElementById("loaiYeuCau").value,
-                key: document.getElementById("keyInput").value.trim(),
-                giaTriCapNhat: document.getElementById("valueInput").value.trim()
-            };
-
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    mode: "no-cors", // Bắt buộc giữ nguyên no-cors
-                    // QUAN TRỌNG: Đổi thành text/plain để tránh lỗi CORS
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(payload)
-                });
-                
-                document.getElementById("submitStatus").innerHTML = `
-                    <span style="color: #28a745;">✅ Gửi thành công! Cảm ơn bạn đã ủng hộ ❤️</span>
-                `;
-                document.getElementById("requestForm").reset();
-                hienThiTheoLoai();
-                
-                setTimeout(() => {
-                    document.getElementById("submitStatus").innerHTML = "";
-                    submitBtn.disabled = false;
-                }, 5000);
-                
-            } catch (err) {
-                console.error("Lỗi chi tiết:", err);
-                document.getElementById("submitStatus").innerHTML = `
-                    <span style="color: #dc3545;">❌ Lỗi kết nối! Vui lòng thử lại.</span>
-                `;
-                submitBtn.disabled = false;
-            }
-        }
-
-        // Mapping loại yêu cầu
-        const mapping = {
-            "Cập nhật loại hình đơn vị": { 
-                keyLabel: "Mã đơn vị", 
-                valueLabel: "Loại hình đơn vị", 
-                keyPlaceholder: "VD: 822.10030.1021680",
-                type: "select_loaihinh" 
-            },
-            "Cập nhật loại đơn vị": { 
-                keyLabel: "Mã đơn vị", 
-                valueLabel: "Loại đơn vị", 
-                keyPlaceholder: "VD: 822.10030.1021680", 
-                type: "select_loaidv" 
-            },
-            "Cập nhật tên đơn vị": { 
-                keyLabel: "Mã đơn vị", 
-                valueLabel: "Tên đơn vị", 
-                keyPlaceholder: "VD: 822.10030.1021680", 
-                valuePlaceholder: "VD: Trường THCS Lam Điền", 
-                type: "text" 
-            },
-            "Cập nhật email đơn vị": { 
-                keyLabel: "Mã đơn vị", 
-                valueLabel: "Email mới", 
-                keyPlaceholder: "VD: 832.00847.1162345", 
-                valuePlaceholder: "VD: hoangchien866089@gmail.com", 
-                type: "email" 
-            },
-            "Cập nhật mã kho bạc của user": { 
-                keyLabel: "User", 
-                valueLabel: "Mã KB mới", 
-                keyPlaceholder: "VD: mb\\luunq", 
-                valuePlaceholder: "VD: 0011", 
-                type: "number" 
-            }
-        };
 
         function hienThiTheoLoai() {
             const loai = document.getElementById("loaiYeuCau").value;
@@ -341,7 +227,6 @@
                 keyInput.placeholder = m.keyPlaceholder;
                 keyInput.value = "";
 
-                // Gen HTML động cho phần value
                 if (m.type === "select_loaihinh") {
                     valueContainer.innerHTML = `
                         <select id="valueInput" required>
@@ -375,10 +260,104 @@
             }
         }
 
-        // Khởi tạo
+        // XỬ LÝ POPUP LỖI
+        function moPopup(index) {
+            const loi = danhSachLoi[index];
+            document.getElementById("popupTitle").innerText = loi.tieuDe;
+            document.getElementById("popupDesc").innerText = loi.moTa;
+            document.getElementById("popup").classList.add("active");
+        }
+        function closePopup() { document.getElementById("popup").classList.remove("active"); }
+        document.getElementById("popup").addEventListener("click", function(e) { if (e.target === this) closePopup(); });
+
+        // XỬ LÝ SHOPEE VÀ GỬI YÊU CẦU
+        function moPopupShopee() {
+            const form = document.getElementById("requestForm");
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const shopeeBtn = document.getElementById("shopeeBtn");
+            shopeeBtn.classList.remove("clicked");
+            shopeeBtn.disabled = false; 
+            document.getElementById("shopeeStatus").innerHTML = "";
+            document.getElementById("shopeePopup").classList.add("active");
+        }
+
+        function closeShopeePopup() {
+            document.getElementById("shopeePopup").classList.remove("active");
+        }
+
+        function moShopee() {
+            const btn = document.getElementById("shopeeBtn");
+            const status = document.getElementById("shopeeStatus");
+            
+            btn.classList.add("clicked");
+            btn.disabled = true; 
+            status.innerHTML = '<span class="success-check">✅ Đang xử lý...</span>';
+            
+            // 1. Mở Shopee sang tab/app mới
+            window.open(SHOPEE_WEB_LINK, '_blank');
+            
+            // 2. Tab hiện tại tự động đóng popup và gọi hàm gửi dữ liệu
+            setTimeout(() => {
+                document.getElementById("shopeePopup").classList.remove("active");
+                guiYeuCau();
+                
+                // Khôi phục nút bấm sau khi popup đã đóng
+                setTimeout(() => {
+                    btn.classList.remove("clicked");
+                    btn.disabled = false;
+                    status.innerHTML = '';
+                }, 1000);
+            }, 500); 
+        }
+
+        async function guiYeuCau() {
+            const submitBtn = document.querySelector("#requestForm button");
+            submitBtn.disabled = true;
+            document.getElementById("submitStatus").innerText = "Đang gửi...";
+
+            const payload = {
+                hoTen: document.getElementById("hoTen").value.trim(),
+                email: document.getElementById("email").value.trim(),
+                loaiYeuCau: document.getElementById("loaiYeuCau").value,
+                key: document.getElementById("keyInput").value.trim(),
+                giaTriCapNhat: document.getElementById("valueInput").value.trim()
+            };
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
+                
+                document.getElementById("submitStatus").innerHTML = `
+                    <span style="color: #28a745;">✅ Gửi thành công! Cảm ơn bạn đã ủng hộ ❤️</span>
+                `;
+                document.getElementById("requestForm").reset();
+                hienThiTheoLoai();
+                
+                setTimeout(() => {
+                    document.getElementById("submitStatus").innerHTML = "";
+                    submitBtn.disabled = false;
+                }, 5000);
+                
+            } catch (err) {
+                console.error("Lỗi chi tiết:", err);
+                document.getElementById("submitStatus").innerHTML = `
+                    <span style="color: #dc3545;">❌ Lỗi kết nối! Vui lòng thử lại.</span>
+                `;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // KHỞI TẠO LẦN ĐẦU
         renderLoi();
         hienThiTheoLoai();
-    </script>
+    </script>   
 </body>
 </html>
 
