@@ -205,18 +205,21 @@
 
         // Xử lý popup Shopee
         function moPopupShopee() {
-            // Kiểm tra form hợp lệ
+            // Kiểm tra form hợp lệ trước khi hiện popup
             const form = document.getElementById("requestForm");
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
             
-            // Reset trạng thái
-            document.getElementById("confirmShopeeBtn").disabled = true;
-            document.getElementById("shopeeBtn").classList.remove("clicked");
+            // Reset trạng thái của popup Shopee
+            const shopeeBtn = document.getElementById("shopeeBtn");
+            shopeeBtn.classList.remove("clicked");
+            shopeeBtn.disabled = false; // Đảm bảo nút luôn bấm được khi mở lại popup
+            
             document.getElementById("shopeeStatus").innerHTML = "";
             
+            // Hiển thị popup
             document.getElementById("shopeePopup").classList.add("active");
         }
 
