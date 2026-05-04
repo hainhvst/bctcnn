@@ -225,32 +225,66 @@
             const status = document.getElementById("shopeeStatus");
             
             btn.classList.add("clicked");
-            btn.disabled = true; // Khóa nút tránh người dùng bấm 2 lần
-            status.innerHTML = '<span class="success-check">✅ Đang xử lý và mở Shopee...</span>';
+            btn.disabled = true; 
+            status.innerHTML = '<span class="success-check">✅ Đang xử lý...</span>';
             
-            // 1. Thử gọi Deep link để mở App Shopee
-            window.location.href = SHOPEE_DEEP_LINK;
+            // 1. Mở Shopee sang tab mới
+            window.open(SHOPEE_WEB_LINK, '_blank');
             
-            // 2. Chờ 1.5 giây để kiểm tra
+            // 2. Tab hiện tại tự động đóng popup và gửi dữ liệu
             setTimeout(() => {
-                // Nếu trình duyệt vẫn đang hiển thị (tức là không mở được App)
-                // thì sẽ mở Shopee trên web ở một tab mới
-                if (!document.hidden) {
-                    window.open(SHOPEE_WEB_LINK, '_blank');
-                }
-                
-                // 3. TỰ ĐỘNG ĐÓNG POPUP VÀ GỬI YÊU CẦU Ở TAB HIỆN TẠI
                 document.getElementById("shopeePopup").classList.remove("active");
-                guiYeuCau();
+                guiYeuCau(); // Tự động gọi hàm gửi
                 
-                // Reset lại trạng thái nút cho lần sử dụng sau
+                // Khôi phục lại trạng thái nút sau 1 giây
                 setTimeout(() => {
                     btn.classList.remove("clicked");
                     btn.disabled = false;
                     status.innerHTML = '';
                 }, 1000);
+            }, 500); // Chờ 0.5s cho hiệu ứng mượt mà
+        }
+
+        async function guiYeuCau() {
+            const submitBtn = document.querySelector("#requestForm button");
+            submitBtn.disabled = true;
+            document.getElementById("submitStatus").innerText = "Đang gửi...";
+
+            const payload = {
+                hoTen: document.getElementById("hoTen").value.trim(),
+                email: document.getElementById("email").value.trim(),
+                loaiYeuCau: document.getElementById("loaiYeuCau").value,
+                key: document.getElementById("keyInput").value.trim(),
+                giaTriCapNhat: document.getElementById("valueInput").value.trim()
+            };
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors", // Bắt buộc giữ nguyên no-cors
+                    // QUAN TRỌNG: Đổi thành text/plain để tránh lỗi CORS
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
                 
-            }, 1500); // Thời gian chờ 1.5s là vừa đẹp để trình duyệt phản hồi
+                document.getElementById("submitStatus").innerHTML = `
+                    <span style="color: #28a745;">✅ Gửi thành công! Cảm ơn bạn đã ủng hộ ❤️</span>
+                `;
+                document.getElementById("requestForm").reset();
+                hienThiTheoLoai();
+                
+                setTimeout(() => {
+                    document.getElementById("submitStatus").innerHTML = "";
+                    submitBtn.disabled = false;
+                }, 5000);
+                
+            } catch (err) {
+                console.error("Lỗi chi tiết:", err);
+                document.getElementById("submitStatus").innerHTML = `
+                    <span style="color: #dc3545;">❌ Lỗi kết nối! Vui lòng thử lại.</span>
+                `;
+                submitBtn.disabled = false;
+            }
         }
 
         // Mapping loại yêu cầu
