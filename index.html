@@ -259,7 +259,13 @@
                 valueContainer.innerHTML = `<input type="text" id="valueInput" required>`;
             }
         }
-
+        // Bắt sự kiện người dùng gõ vào ô Mã đơn vị/User
+        document.getElementById("keyInput").addEventListener("input", function() {
+            if (document.getElementById("loaiYeuCau").value === "Cập nhật mã kho bạc của user") {
+                // Tự động ép tất cả thành chữ in hoa ngay khi đang gõ
+                this.value = this.value.toUpperCase();
+            }
+        });
         // XỬ LÝ POPUP LỖI
         function moPopup(index) {
             const loi = danhSachLoi[index];
@@ -277,6 +283,21 @@
                 form.reportValidity();
                 return;
             }
+
+            // KIỂM TRA ĐỊNH DẠNG USER TRƯỚC KHI GỬI
+            const loai = document.getElementById("loaiYeuCau").value;
+            const key = document.getElementById("keyInput").value.trim();
+            
+            if (loai === "Cập nhật mã kho bạc của user") {
+                // Regex: Bắt đầu bằng TW\, MB\ hoặc MN\ tiếp theo là chữ cái hoặc số
+                const regex = /^(TW|MB|MN)\\[A-Z0-9]+$/;
+                if (!regex.test(key)) {
+                    alert("Sai định dạng User! Phải bắt đầu bằng TW\\, MB\\ hoặc MN\\ và theo sau là ký tự/số (VD: MB\\LUUNQ).");
+                    document.getElementById("keyInput").focus();
+                    return; // Dừng lại, không cho mở popup gửi yêu cầu
+                }
+            }
+
             const shopeeBtn = document.getElementById("shopeeBtn");
             shopeeBtn.classList.remove("clicked");
             shopeeBtn.disabled = false; 
