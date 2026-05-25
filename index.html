@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hỗ trợ cập nhật BCTCNN</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: #f4f4f4; }
+        .desktop-warning {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 9999; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center; padding: 20px;
+        }
+        @media (min-width: 769px) {
+            .desktop-warning { display: flex; }
+        }
+        .container { max-width: 500px; margin: 0 auto; background: white; min-height: 100vh; }
+        .tabs { display: flex; background: #007bff; }
+        .tab {
+            flex: 1; padding: 14px; text-align: center; color: rgba(255,255,255,0.7);
+            font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .tab.active { color: white; background: #0056b3; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        label { font-weight: bold; margin-top: 12px; display: block; }
+        input, select, button { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        button { background: #28a745; color: white; border: none; margin-top: 20px; font-weight: bold; cursor: pointer; }
+        button:active { background: #1e7e34; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        .error-item {
+            background: #fff; padding: 14px; margin-bottom: 10px; border-left: 4px solid #dc3545;
+            border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;
+        }
+        .error-item:hover { background: #f8d7da; }
+        .popup {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .popup.active { display: flex; }
+        .popup-content {
+            background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px;
+            max-height: 80vh; overflow-y: auto; position: relative; text-align: center;
+        }
+        .popup-close { position: absolute; top: 8px; right: 12px; font-size: 24px; cursor: pointer; color: #999; }
+        .popup-close:hover { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="desktop-warning">
+        <h2>📱 Vui lòng truy cập bằng điện thoại</h2>
+        <p>Trang web này chỉ dành cho thiết bị di động.</p>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab(0)">📝 Gửi yêu cầu</div>
+            <div class="tab" onclick="switchTab(1)">🔧 Xử lý lỗi</div>
+        </div>
+
+        <div id="tab1" class="tab-content active">
+            <h2>Gửi yêu cầu hỗ trợ</h2>
+            <form id="requestForm">
+                <label>Họ tên *</label>
+                <input type="text" id="hoTen" required>
+
+                <label>Email *</label>
+                <input type="email" id="email" required>
+
+                <label>Chọn nội dung cập nhật *</label>
+                <select id="loaiYeuCau" onchange="hienThiTheoLoai()" required>
+                    <option value="">-- Chọn --</option>
+                    <option value="Cập nhật loại hình đơn vị">Cập nhật loại hình đơn vị</option>
+                    <option value="Cập nhật loại đơn vị">Cập nhật loại đơn vị</option>
+                    <option value="Cập nhật tên đơn vị">Cập nhật tên đơn vị</option>
+                    <option value="Cập nhật email đơn vị">Cập nhật email đơn vị</option>
+                    <option value="Cập nhật mã kho bạc của user">Cập nhật mã kho bạc của user</option>
+                </select>
+
+                <label id="labelKey">Mã đơn vị *</label>
+                <input type="text" id="keyInput" required>
+
+                <label id="labelValue">Giá trị cập nhật *</label>
+                <div id="valueContainer">
+                    <input type="text" id="valueInput" required>
+                </div>
+
+                <button type="button" onclick="xulyGuiYeuCau()">📨 Gửi yêu cầu</button>
+            </form>
+            <p id="submitStatus" style="margin-top:12px; text-align:center; font-weight: bold;"></p>
+        </div>
+
+        <div id="tab2" class="tab-content">
+            <h2>Danh sách lỗi thường gặp</h2>
+            <div id="danhSachLoi"></div>
+        </div>
+    </div>
+
+    <div class="popup" id="popup">
+        <div class="popup-content">
+            <span class="popup-close" onclick="closePopup()">&times;</span>
+            <h3 id="popupTitle"></h3>
+            <p id="popupDesc" style="margin-top:10px; white-space: pre-wrap;"></p>
+        </div>
+    </div>
+
+    <script>
+        // KHAI BÁO BIẾN QUAN TRỌNG
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbHPtEUCpfO-v4UwTOYeeQt4jHFIOTn2bSFKaiXgcf96S4z93nQNa3eLfvgNJEZUl2/exec"; 
+
+        // DANH SÁCH LỖI VÀ MAPPING
+        const danhSachLoi = [
+            { tieuDe: "Lỗi không đăng nhập được", moTa: "Kiểm tra lại tài khoản/mật khẩu. Nếu quên mật khẩu, liên hệ admin để reset." },
+            { tieuDe: "Lỗi không tìm thấy đơn vị", moTa: "Mã đơn vị không tồn tại trong hệ thống. Vui lòng kiểm tra lại mã hoặc liên hệ quản trị." },
+            { tieuDe: "Lỗi sai định dạng email", moTa: "Email phải có dạng ten@domain.com. Hãy kiểm tra và thử lại." },
+            { tieuDe: "Lỗi trùng mã kho bạc", moTa: "Mã kho bạc đã được gán cho user khác. Liên hệ quản lý để kiểm tra." }
+        ];
+
+        const mapping = {
+            "Cập nhật loại hình đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Loại hình đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", type: "select_loaihinh" 
+            },
+            "Cập nhật loại đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Loại đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", type: "select_loaidv" 
+            },
+            "Cập nhật tên đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Tên đơn vị", 
+                keyPlaceholder: "VD: 822.10030.1021680", valuePlaceholder: "VD: Trường THCS Lam Điền", type: "text" 
+            },
+            "Cập nhật email đơn vị": { 
+                keyLabel: "Mã đơn vị", valueLabel: "Email mới", 
+                keyPlaceholder: "VD: 832.00847.1162345", valuePlaceholder: "VD: hoangchien866089@gmail.com", type: "email" 
+            },
+            "Cập nhật mã kho bạc của user": { 
+                keyLabel: "User", valueLabel: "Mã KB mới", 
+                keyPlaceholder: "VD: mb\\luunq", valuePlaceholder: "VD: 0011", type: "text" 
+            }
+        };
+
+        // GIAO DIỆN VÀ TAB
+        function renderLoi() {
+            const container = document.getElementById("danhSachLoi");
+            container.innerHTML = danhSachLoi.map((loi, index) => `
+                <div class="error-item" onclick="moPopup(${index})">
+                    <strong>${loi.tieuDe}</strong>
+                </div>
+            `).join('');
+        }
+
+        function switchTab(index) {
+            document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
+            document.getElementById('tab1').classList.toggle('active', index === 0);
+            document.getElementById('tab2').classList.toggle('active', index === 1);
+        }
+
+        function hienThiTheoLoai() {
+            const loai = document.getElementById("loaiYeuCau").value;
+            const labelKey = document.getElementById("labelKey");
+            const labelValue = document.getElementById("labelValue");
+            const keyInput = document.getElementById("keyInput");
+            const valueContainer = document.getElementById("valueContainer");
+
+            if (loai && mapping[loai]) {
+                const m = mapping[loai];
+                labelKey.innerText = m.keyLabel + " *";
+                labelValue.innerText = m.valueLabel + " *";
+                keyInput.placeholder = m.keyPlaceholder;
+                keyInput.value = "";
+
+                if (m.type === "select_loaihinh") {
+                    valueContainer.innerHTML = `
+                        <select id="valueInput" required>
+                            <option value="">-- Chọn loại hình --</option>
+                            <option value="01">01: Hành Chính</option>
+                            <option value="02">02: Sự Nghiệp</option>
+                            <option value="03">03: DNNN</option>
+                            <option value="04">04: Quỹ</option>
+                            <option value="05">05: CQQL</option>
+                            <option value="06">06: Khác</option>
+                            <option value="07">07: Không xác định</option>
+                        </select>`;
+                } else if (m.type === "select_loaidv") {
+                    valueContainer.innerHTML = `
+                        <select id="valueInput" required>
+                            <option value="">-- Chọn loại đơn vị --</option>
+                            <option value="01">01: ĐV kế toán cấp trên</option>
+                            <option value="02">02: CQ quản lý</option>
+                            <option value="03">03: Quỹ TCNN</option>
+                            <option value="04">04: Chế độ KT</option>
+                            <option value="05">05: ĐV kế toán độc lập</option>
+                        </select>`;
+                } else {
+                    valueContainer.innerHTML = `<input type="${m.type}" id="valueInput" placeholder="${m.valuePlaceholder}" required>`;
+                }
+            } else {
+                labelKey.innerText = "Mã đơn vị/User *";
+                labelValue.innerText = "Giá trị *";
+                keyInput.placeholder = "";
+                valueContainer.innerHTML = `<input type="text" id="valueInput" required>`;
+            }
+        }
+        
+        // Bắt sự kiện người dùng gõ vào ô Mã đơn vị/User
+        document.getElementById("keyInput").addEventListener("input", function() {
+            if (document.getElementById("loaiYeuCau").value === "Cập nhật mã kho bạc của user") {
+                // Tự động ép tất cả thành chữ in hoa ngay khi đang gõ
+                this.value = this.value.toUpperCase();
+            }
+        });
+
+        // XỬ LÝ POPUP LỖI
+        function moPopup(index) {
+            const loi = danhSachLoi[index];
+            document.getElementById("popupTitle").innerText = loi.tieuDe;
+            document.getElementById("popupDesc").innerText = loi.moTa;
+            document.getElementById("popup").classList.add("active");
+        }
+        function closePopup() { document.getElementById("popup").classList.remove("active"); }
+        document.getElementById("popup").addEventListener("click", function(e) { if (e.target === this) closePopup(); });
+
+        // XỬ LÝ KIỂM TRA VÀ GỬI YÊU CẦU
+        function xulyGuiYeuCau() {
+            const form = document.getElementById("requestForm");
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // KIỂM TRA ĐỊNH DẠNG USER TRƯỚC KHI GỬI
+            const loai = document.getElementById("loaiYeuCau").value;
+            const key = document.getElementById("keyInput").value.trim();
+            
+            if (loai === "Cập nhật mã kho bạc của user") {
+                // Regex: Bắt đầu bằng TW\, MB\ hoặc MN\ tiếp theo là chữ cái hoặc số
+                const regex = /^(TW|MB|MN)\\[A-Z0-9]+$/;
+                if (!regex.test(key)) {
+                    alert("Sai định dạng User! Phải bắt đầu bằng TW\\, MB\\ hoặc MN\\ và theo sau là ký tự/số (VD: MB\\LUUNQ).");
+                    document.getElementById("keyInput").focus();
+                    return; 
+                }
+            }
+
+            guiYeuCau();
+        }
+
+        async function guiYeuCau() {
+            const submitBtn = document.querySelector("#requestForm button");
+            submitBtn.disabled = true;
+            document.getElementById("submitStatus").innerHTML = '<span style="color: #007bff;">Đang gửi dữ liệu...</span>';
+
+            const payload = {
+                hoTen: document.getElementById("hoTen").value.trim(),
+                email: document.getElementById("email").value.trim(),
+                loaiYeuCau: document.getElementById("loaiYeuCau").value,
+                key: document.getElementById("keyInput").value.trim(),
+                giaTriCapNhat: document.getElementById("valueInput").value.trim()
+            };
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
+                
+                document.getElementById("submitStatus").innerHTML = `
+                    <span style="color: #28a745;">✅ Đã gửi yêu cầu thành công!</span>
+                `;
+                document.getElementById("requestForm").reset();
+                hienThiTheoLoai();
+                
+                setTimeout(() => {
+                    document.getElementById("submitStatus").innerHTML = "";
+                    submitBtn.disabled = false;
+                }, 5000);
+                
+            } catch (err) {
+                console.error("Lỗi chi tiết:", err);
+                document.getElementById("submitStatus").innerHTML = `
+                    <span style="color: #dc3545;">❌ Lỗi kết nối! Vui lòng thử lại.</span>
+                `;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // KHỞI TẠO LẦN ĐẦU
+        renderLoi();
+        hienThiTheoLoai();
+    </script>   
+</body>
+</html>
